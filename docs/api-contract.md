@@ -163,7 +163,7 @@ Returns all system defaults **plus** the authenticated user's custom categories.
 |--------|-----------|
 | 400 | Field missing, blank, or `type` is not `INCOME`/`EXPENSE` |
 | 401 | Not authenticated |
-| 409 | Name already exists as a system default **or** as this user's custom category (case-sensitive) |
+| 409 | Name already exists as a system default **or** as this user's custom category (case-insensitive — "Food" and "food" are the same; original casing is preserved in storage) |
 
 ---
 
@@ -204,7 +204,7 @@ Returns all system defaults **plus** the authenticated user's custom categories.
 |-------|------|-----------|
 | `amount` | BigDecimal | Required; > 0 |
 | `date` | String (YYYY-MM-DD) | Required; not in the future (checked against injected `Clock`) |
-| `category` | String | Required; must match a system default or the user's own custom category |
+| `category` | String | Required; case-insensitive match against system defaults and the user's custom categories (stored casing is preserved in the response) |
 | `description` | String | Optional |
 
 **Success — 201 Created:**
@@ -548,7 +548,7 @@ All of the authenticated user's goals with live progress.
 
 **Problem:** If a client sends `"date"` in the PUT body, should the server return 400 or silently ignore it?
 
-**Decision:** Silently ignore `date`. The update DTO simply does not include a `date` field; Jackson will discard the incoming key. The response returns the original date unchanged.
+**Decision (RESOLVED):** Silently ignore `date` — consistent with the spec's own example PUT body, which only shows `amount` and `description`. The update DTO does not include a `date` field; Jackson discards the key. The response returns the original date unchanged. Exact behaviour when `date` is present in the body will be verified against the test script.
 
 **Risk: MEDIUM** — if the script sends `date` and expects 400, we add a `@JsonIgnoreProperties` violation check.
 
@@ -622,24 +622,22 @@ Pattern: `^\+?[0-9]{7,15}$`
 
 **CLAUDE.md:** "Custom category names are unique per user. Clashing with a default name is also a conflict (409)."
 
-**Decision:** When creating a custom category, check:
-1. No system default has the same name (case-sensitive).
-2. No existing custom category for this user has the same name (case-sensitive).
+**Decision (RESOLVED):** Case-insensitive uniqueness; original casing is preserved in storage and responses. When creating a custom category, check:
+1. No system default has the same name (case-insensitive `UPPER(name)` comparison).
+2. No existing custom category for this user has the same name (case-insensitive).
 
-Either failure → 409 Conflict.
+Either failure → 409 Conflict. Category lookup when creating transactions is also case-insensitive (for consistency — a user typing "salary" still resolves to "Salary").
 
-**Risk: MEDIUM** — the script may test case-insensitive matching. If so, change comparisons to `UPPER(name)` in Phase 8.
+**Risk: LOW** — explicitly confirmed by the user.
 
 ---
 
 ## Open Questions Needing Your Decision
 
-1. **Test script:** `.assignment/financial_manager_tests.sh` is missing. Several high-risk ambiguities above can only be resolved definitively by reading it. Please provide the file (or its download URL) before Phase 8.
+1. **Test script:** `.assignment/financial_manager_tests.sh` is missing. The category filter param name (`categoryId` vs `category`) and exact date-in-PUT-body behaviour cannot be locked until the script is read. Phase 3 will not start until the script is present.
 
-2. **Category filter param (`categoryId` vs `category`):** This is the highest-risk decision above. If you already know which one the script uses, tell me now and I will implement the correct one from the start.
+2. **Category filter param (`categoryId` vs `category`):** Deferred until the test script is available. Category responses expose `id` as a harmless extra field. Implementation will match whichever param the script uses.
 
-3. **Category name case sensitivity:** I am treating category names as case-sensitive (e.g., "salary" ≠ "Salary"). If you want case-insensitive uniqueness checking, say so before Phase 3.
+3. **Year range for reports:** Chosen as 1900–2100. Adjust if the test script uses a different range.
 
-4. **Year range for reports:** I chose 1900–2100 as the "sane" range. If you have a tighter or different constraint in mind, let me know.
-
-5. **Transaction PUT semantics:** I am treating PUT as a partial update — only fields present in the body are changed. If you want strict PUT semantics (all updatable fields required), say so.
+> Resolved: category name uniqueness is case-insensitive (original casing preserved). Transaction PUT uses partial-update semantics.
