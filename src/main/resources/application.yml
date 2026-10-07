@@ -10,6 +10,12 @@ spring:
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: false
 
 ---
 spring:
@@ -56,6 +62,11 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
 
 logging:
   level:
