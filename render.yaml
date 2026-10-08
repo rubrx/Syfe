@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: syfe-finance-manager
+    runtime: docker
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
+    healthCheckPath: /swagger-ui.html
