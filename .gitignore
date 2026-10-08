@@ -35,3 +35,5 @@ build/
 .assignment/
 .java-version
 .claude/settings.local.json
+CLAUDE.md
+docs/

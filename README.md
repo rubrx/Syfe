@@ -1,6 +1,6 @@
 # Personal Finance Manager API
 
-A RESTful API for managing personal finances — transactions, categories, savings goals, and monthly/yearly reports. Built as a Syfe backend intern take-home assignment.
+A RESTful API for managing personal finances — transactions, categories, savings goals, and monthly/yearly reports.
 
 ---
 
