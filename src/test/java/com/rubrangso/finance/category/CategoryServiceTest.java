@@ -7,10 +7,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.rubrangso.finance.category.dto.CreateCategoryRequest;
+import com.rubrangso.finance.common.exception.BusinessValidationException;
 import com.rubrangso.finance.common.exception.DuplicateResourceException;
 import com.rubrangso.finance.common.exception.ForbiddenOperationException;
 import com.rubrangso.finance.common.exception.ResourceNotFoundException;
 import com.rubrangso.finance.common.security.CurrentUserProvider;
+import com.rubrangso.finance.transaction.TransactionRepository;
 import com.rubrangso.finance.user.User;
 import java.util.List;
 import java.util.Optional;
@@ -27,13 +29,14 @@ class CategoryServiceTest {
 
     @Mock private CategoryRepository categoryRepository;
     @Mock private CurrentUserProvider currentUserProvider;
+    @Mock private TransactionRepository transactionRepository;
 
     private CategoryService categoryService;
     private User user;
 
     @BeforeEach
     void setUp() {
-        categoryService = new CategoryService(categoryRepository, currentUserProvider);
+        categoryService = new CategoryService(categoryRepository, currentUserProvider, transactionRepository);
         user = new User("Alice", "alice@example.com", "hashed", null);
         ReflectionTestUtils.setField(user, "id", 1L);
         when(currentUserProvider.getCurrentUser()).thenReturn(user);
@@ -106,6 +109,19 @@ class CategoryServiceTest {
 
         assertThatThrownBy(() -> categoryService.deleteCategory("Salary"))
                 .isInstanceOf(ForbiddenOperationException.class);
+    }
+
+    @Test
+    @DisplayName("deleteCategory throws 400 when category is in use by transactions")
+    void deleteCategory_inUse_throwsBusinessValidationException() {
+        var category = new Category("Freelance", CategoryType.INCOME, true, user);
+        ReflectionTestUtils.setField(category, "id", 9L);
+        when(categoryRepository.findByNameIgnoreCaseForUser("Freelance", user))
+                .thenReturn(Optional.of(category));
+        when(transactionRepository.existsByCategoryId(9L)).thenReturn(true);
+
+        assertThatThrownBy(() -> categoryService.deleteCategory("Freelance"))
+                .isInstanceOf(BusinessValidationException.class);
     }
 
     @Test

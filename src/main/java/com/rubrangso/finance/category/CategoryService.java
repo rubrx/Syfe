@@ -7,6 +7,7 @@ import com.rubrangso.finance.common.exception.DuplicateResourceException;
 import com.rubrangso.finance.common.exception.ForbiddenOperationException;
 import com.rubrangso.finance.common.exception.ResourceNotFoundException;
 import com.rubrangso.finance.common.security.CurrentUserProvider;
+import com.rubrangso.finance.transaction.TransactionRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -22,12 +23,15 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CurrentUserProvider currentUserProvider;
+    private final TransactionRepository transactionRepository;
 
     public CategoryService(
             CategoryRepository categoryRepository,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider,
+            TransactionRepository transactionRepository) {
         this.categoryRepository = categoryRepository;
         this.currentUserProvider = currentUserProvider;
+        this.transactionRepository = transactionRepository;
     }
 
     /**
@@ -78,10 +82,10 @@ public class CategoryService {
                     "Cannot delete system default category '" + category.getName() + "'");
         }
 
-        // Transaction reference check is done via the transaction repository query in Phase 4.
-        // The Category entity does not hold a back-reference to avoid circular deps here.
-        // Instead we check in the repository via a count query injected from TransactionRepository.
-        // For now, proceed without the check — it will be wired in Phase 4.
+        if (transactionRepository.existsByCategoryId(category.getId())) {
+            throw new BusinessValidationException(
+                    "Category '" + category.getName() + "' is referenced by existing transactions");
+        }
         categoryRepository.delete(category);
     }
 }
