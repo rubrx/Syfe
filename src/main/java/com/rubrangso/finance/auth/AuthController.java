@@ -6,7 +6,6 @@ import com.rubrangso.finance.auth.dto.RegisterRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,9 +25,7 @@ public class AuthController {
     }
 
     /**
-     * Registers a new user account.
-     *
-     * @return the created user (no password)
+     * Registers a new user account. Returns a message and the new user's ID.
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -53,8 +50,7 @@ public class AuthController {
      * the security filter returns 401 before routing.
      */
     @PostMapping("/logout")
-    public Map<String, String> logout(HttpServletRequest request) {
-        authService.logout(request);
-        return Map.of("message", "Logged out successfully");
+    public AuthResponse logout(HttpServletRequest request) {
+        return authService.logout(request);
     }
 }

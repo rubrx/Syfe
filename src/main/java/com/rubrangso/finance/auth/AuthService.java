@@ -42,20 +42,20 @@ public class AuthService {
     }
 
     /**
-     * Registers a new user. Email uniqueness is case-sensitive at the DB level.
+     * Registers a new user. {@code username} is treated as an email address.
      *
-     * @throws DuplicateResourceException if the email is already taken
+     * @throws DuplicateResourceException if the username (email) is already taken
      */
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("Email already registered");
+        if (userRepository.existsByEmail(request.username())) {
+            throw new DuplicateResourceException("Username already registered");
         }
         var user = new User(
-                request.name(),
-                request.email(),
+                request.fullName(),
+                request.username(),
                 passwordEncoder.encode(request.password()),
-                request.phone());
-        return AuthResponse.from(userRepository.save(user));
+                request.phoneNumber());
+        return AuthResponse.registered(userRepository.save(user));
     }
 
     /**
@@ -68,7 +68,7 @@ public class AuthService {
             HttpServletResponse httpResponse) {
 
         var authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
         // Ensure a session exists, then rotate its ID (session fixation protection)
         httpRequest.getSession(true);
@@ -80,9 +80,7 @@ public class AuthService {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
 
-        return AuthResponse.from(
-                userRepository.findByEmail(request.email())
-                        .orElseThrow());
+        return AuthResponse.loggedIn();
     }
 
     /**
@@ -90,11 +88,12 @@ public class AuthService {
      * If the request reaches this method the caller is already authenticated
      * (unauthenticated requests are rejected by the security filter with 401).
      */
-    public void logout(HttpServletRequest request) {
+    public AuthResponse logout(HttpServletRequest request) {
         var session = request.getSession(false);
         if (session != null) {
             session.invalidate();
         }
         SecurityContextHolder.clearContext();
+        return AuthResponse.loggedOut();
     }
 }

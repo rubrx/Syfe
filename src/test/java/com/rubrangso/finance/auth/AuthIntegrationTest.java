@@ -19,7 +19,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Full session lifecycle: register → login → protected call with cookie → logout → 401.
+ * Full session lifecycle: register → login → authenticated call → logout → 401.
  * Uses real Spring context and H2 in-memory database.
  */
 @SpringBootTest
@@ -33,33 +33,32 @@ class AuthIntegrationTest {
     @Test
     @DisplayName("full session lifecycle: register → login → authenticated call → logout → 401")
     void sessionLifecycle() throws Exception {
-        // Register
         var registerBody = objectMapper.writeValueAsString(
-                new RegisterRequest("Bob", "bob@example.com", "password1", null));
+                new RegisterRequest("Bob", "bob@example.com", "password1b", null));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(registerBody))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("bob@example.com"));
+                .andExpect(jsonPath("$.message").value("User registered successfully"))
+                .andExpect(jsonPath("$.userId").isNumber());
 
-        // Login — capture the mock session (MockMvc simulates session; Tomcat would set JSESSIONID cookie)
         var loginBody = objectMapper.writeValueAsString(
-                new LoginRequest("bob@example.com", "password1"));
+                new LoginRequest("bob@example.com", "password1b"));
 
         var loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Login successful"))
                 .andReturn();
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
         assertThat(session).isNotNull();
 
-        // Authenticated request using the session
         mockMvc.perform(post("/api/auth/logout").session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Logged out successfully"));
+                .andExpect(jsonPath("$.message").value("Logout successful"));
 
         // After logout the session is invalidated — next request returns 401
         mockMvc.perform(post("/api/auth/logout").session(session))
@@ -79,7 +78,7 @@ class AuthIntegrationTest {
     @DisplayName("duplicate registration returns 409")
     void register_duplicate_returns409() throws Exception {
         var body = objectMapper.writeValueAsString(
-                new RegisterRequest("Alice", "alice@example.com", "password1", null));
+                new RegisterRequest("Alice", "alice@example.com", "password1a", null));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON).content(body))

@@ -1,7 +1,6 @@
 package com.rubrangso.finance.auth;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,25 +36,23 @@ class AuthControllerTest {
     @MockitoBean AppUserDetailsService appUserDetailsService;
 
     @Test
-    @DisplayName("POST /api/auth/register returns 201 with user body")
+    @DisplayName("POST /api/auth/register returns 201 with message and userId")
     void register_valid_returns201() throws Exception {
-        var request = new RegisterRequest("Alice", "alice@example.com", "password1", null);
-        var response = new AuthResponse(1L, "Alice", "alice@example.com", null);
-        when(authService.register(any())).thenReturn(response);
+        var request = new RegisterRequest("Alice", "alice@example.com", "password1a", null);
+        when(authService.register(any())).thenReturn(new AuthResponse("User registered successfully", 1L));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("alice@example.com"))
-                .andExpect(jsonPath("$.name").value("Alice"))
-                .andExpect(jsonPath("$.id").value(1));
+                .andExpect(jsonPath("$.message").value("User registered successfully"))
+                .andExpect(jsonPath("$.userId").value(1));
     }
 
     @Test
-    @DisplayName("POST /api/auth/register returns 400 when name is blank")
-    void register_blankName_returns400() throws Exception {
-        var request = new RegisterRequest("", "alice@example.com", "password1", null);
+    @DisplayName("POST /api/auth/register returns 400 when fullName is blank")
+    void register_blankFullName_returns400() throws Exception {
+        var request = new RegisterRequest("", "alice@example.com", "password1a", null);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -65,9 +62,9 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register returns 400 when password is too short")
-    void register_shortPassword_returns400() throws Exception {
-        var request = new RegisterRequest("Alice", "alice@example.com", "abc", null);
+    @DisplayName("POST /api/auth/register returns 400 when password has no digit")
+    void register_noDigitPassword_returns400() throws Exception {
+        var request = new RegisterRequest("Alice", "alice@example.com", "passwordonly", null);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,10 +73,10 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register returns 409 on duplicate email")
-    void register_duplicateEmail_returns409() throws Exception {
-        var request = new RegisterRequest("Alice", "alice@example.com", "password1", null);
-        when(authService.register(any())).thenThrow(new DuplicateResourceException("Email already registered"));
+    @DisplayName("POST /api/auth/register returns 409 on duplicate username")
+    void register_duplicateUsername_returns409() throws Exception {
+        var request = new RegisterRequest("Alice", "alice@example.com", "password1a", null);
+        when(authService.register(any())).thenThrow(new DuplicateResourceException("Username already registered"));
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -88,17 +85,16 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/login returns 200 with user body")
+    @DisplayName("POST /api/auth/login returns 200 with message")
     void login_validCredentials_returns200() throws Exception {
-        var request = new LoginRequest("alice@example.com", "password1");
-        var response = new AuthResponse(1L, "Alice", "alice@example.com", null);
-        when(authService.login(any(), any(), any())).thenReturn(response);
+        var request = new LoginRequest("alice@example.com", "password1a");
+        when(authService.login(any(), any(), any())).thenReturn(AuthResponse.loggedIn());
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("alice@example.com"));
+                .andExpect(jsonPath("$.message").value("Login successful"));
     }
 
     @Test
@@ -118,11 +114,11 @@ class AuthControllerTest {
     @DisplayName("POST /api/auth/logout returns 200 when authenticated")
     @WithMockUser
     void logout_authenticated_returns200() throws Exception {
-        doNothing().when(authService).logout(any());
+        when(authService.logout(any())).thenReturn(AuthResponse.loggedOut());
 
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Logged out successfully"));
+                .andExpect(jsonPath("$.message").value("Logout successful"));
     }
 
     @Test
