@@ -41,4 +41,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     /** Used by CategoryService to block deletion of a category that is still in use. */
     boolean existsByCategoryId(Long categoryId);
+
+    /**
+     * Sums transaction amounts for the given user, type, and date range.
+     * Used by SavingsGoalService to compute goal progress. Returns 0 when no rows match.
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE t.user = :user
+              AND t.type = :type
+              AND t.date >= :startDate
+            """)
+    java.math.BigDecimal sumAmountByUserAndTypeFrom(
+            @Param("user") com.rubrangso.finance.user.User user,
+            @Param("type") com.rubrangso.finance.category.CategoryType type,
+            @Param("startDate") java.time.LocalDate startDate);
 }
