@@ -5,6 +5,7 @@ import com.rubrangso.finance.transaction.Transaction;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/** Read model returned for every transaction endpoint. */
 public record TransactionResponse(
         Long id,
         BigDecimal amount,

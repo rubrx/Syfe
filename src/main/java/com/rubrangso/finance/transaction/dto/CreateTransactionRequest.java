@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/** Request body for POST /api/transactions. */
 public record CreateTransactionRequest(
 
         @NotNull(message = "Amount is required")

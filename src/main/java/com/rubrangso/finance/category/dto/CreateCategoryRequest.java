@@ -4,6 +4,7 @@ import com.rubrangso.finance.category.CategoryType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+/** Request body for POST /api/categories. */
 public record CreateCategoryRequest(
 
         @NotBlank(message = "Category name is required")

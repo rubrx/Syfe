@@ -124,23 +124,4 @@ public class TransactionService {
         }
     }
 
-    /** Called by reports to compute per-user income totals for a date range. */
-    @Transactional(readOnly = true)
-    public List<TransactionResponse> getTransactionsForReport(
-            LocalDate startDate, LocalDate endDate) {
-        var user = currentUserProvider.getCurrentUser();
-        return transactionRepository
-                .findWithFilters(user, startDate, endDate, null, null)
-                .stream()
-                .map(TransactionResponse::from)
-                .toList();
-    }
-
-    /**
-     * Checks whether any transaction references the given category.
-     * Used by {@link com.rubrangso.finance.category.CategoryService} before deletion.
-     */
-    public boolean isCategoryInUse(Long categoryId) {
-        return transactionRepository.existsByCategoryId(categoryId);
-    }
 }
