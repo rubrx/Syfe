@@ -50,7 +50,7 @@ class GoalControllerTest {
     private GoalResponse sampleGoal() {
         return new GoalResponse(1L, "Emergency Fund", new BigDecimal("5000.00"),
                 TODAY.plusMonths(6), TODAY, new BigDecimal("1000.00"),
-                new BigDecimal("20.00"), new BigDecimal("4000.00"));
+                20.0, new BigDecimal("4000.00"));
     }
 
     @Test

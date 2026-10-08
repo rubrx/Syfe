@@ -11,5 +11,5 @@ public record GoalResponse(
         LocalDate targetDate,
         LocalDate startDate,
         BigDecimal currentProgress,
-        BigDecimal progressPercentage,
+        Double progressPercentage,
         BigDecimal remainingAmount) {}

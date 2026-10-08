@@ -55,8 +55,8 @@ class CategoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.categories").isArray())
                 .andExpect(jsonPath("$.categories.length()").value(2))
-                .andExpect(jsonPath("$.categories[0].isCustom").value(false))
-                .andExpect(jsonPath("$.categories[1].isCustom").value(true));
+                .andExpect(jsonPath("$.categories[0].custom").value(false))
+                .andExpect(jsonPath("$.categories[1].custom").value(true));
     }
 
     @Test
@@ -71,7 +71,7 @@ class CategoryControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Freelance"))
-                .andExpect(jsonPath("$.isCustom").value(true));
+                .andExpect(jsonPath("$.custom").value(true));
     }
 
     @Test

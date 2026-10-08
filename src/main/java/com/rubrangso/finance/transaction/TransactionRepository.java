@@ -22,7 +22,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             WHERE t.user = :user
               AND (:startDate IS NULL OR t.date >= :startDate)
               AND (:endDate IS NULL OR t.date <= :endDate)
-              AND (:categoryId IS NULL OR c.id = :categoryId)
+              AND (:categoryName IS NULL OR LOWER(c.name) = LOWER(:categoryName))
               AND (:type IS NULL OR t.type = :type)
             ORDER BY t.date DESC, t.id DESC
             """)
@@ -30,7 +30,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("user") User user,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
-            @Param("categoryId") Long categoryId,
+            @Param("categoryName") String categoryName,
             @Param("type") CategoryType type);
 
     /**

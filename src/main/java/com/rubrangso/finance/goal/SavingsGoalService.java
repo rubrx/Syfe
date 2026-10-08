@@ -150,12 +150,18 @@ public class SavingsGoalService {
         var expense = transactionRepository.sumAmountByUserAndTypeFrom(
                 user, CategoryType.EXPENSE, goal.getStartDate());
 
-        var progress = income.subtract(expense).setScale(2, RoundingMode.HALF_UP);
+        // Normalize zero so JSON serialises as 0, not 0.00
+        var rawProgress = income.subtract(expense);
+        var progress = rawProgress.signum() == 0
+                ? BigDecimal.ZERO
+                : rawProgress.setScale(2, RoundingMode.HALF_UP);
         var target = goal.getTargetAmount();
 
-        var percentage = progress.divide(target, 2, RoundingMode.HALF_UP)
+        // Multiply before dividing to preserve decimal precision (e.g. 65.5, not 66.00)
+        var percentage = progress
                 .multiply(BigDecimal.valueOf(100))
-                .setScale(2, RoundingMode.HALF_UP);
+                .divide(target, 2, RoundingMode.HALF_UP)
+                .doubleValue();
         var remaining = target.subtract(progress).setScale(2, RoundingMode.HALF_UP);
 
         return new GoalResponse(

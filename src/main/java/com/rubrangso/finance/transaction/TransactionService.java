@@ -48,10 +48,10 @@ public class TransactionService {
      * All filter parameters are optional; null means no constraint.
      */
     public List<TransactionResponse> getTransactions(
-            LocalDate startDate, LocalDate endDate, Long categoryId, CategoryType type) {
+            LocalDate startDate, LocalDate endDate, String category, CategoryType type) {
         var user = currentUserProvider.getCurrentUser();
         return transactionRepository
-                .findWithFilters(user, startDate, endDate, categoryId, type)
+                .findWithFilters(user, startDate, endDate, category, type)
                 .stream()
                 .map(TransactionResponse::from)
                 .toList();

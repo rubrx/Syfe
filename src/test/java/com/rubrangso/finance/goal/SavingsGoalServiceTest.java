@@ -73,7 +73,7 @@ class SavingsGoalServiceTest {
         assertThat(response.goalName()).isEqualTo("Emergency Fund");
         assertThat(response.targetAmount()).isEqualByComparingTo("5000.00");
         assertThat(response.currentProgress()).isEqualByComparingTo("1500.00");
-        assertThat(response.progressPercentage()).isEqualByComparingTo("30.00");
+        assertThat(response.progressPercentage()).isEqualTo(30.0);
         assertThat(response.remainingAmount()).isEqualByComparingTo("3500.00");
     }
 

@@ -72,7 +72,7 @@ class CategoryServiceTest {
         var response = categoryService.createCategory(request);
 
         assertThat(response.name()).isEqualTo("Freelance");
-        assertThat(response.isCustom()).isTrue();
+        assertThat(response.custom()).isTrue();
         assertThat(response.type()).isEqualTo(CategoryType.INCOME);
     }
 
