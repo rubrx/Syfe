@@ -57,4 +57,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("user") com.rubrangso.finance.user.User user,
             @Param("type") com.rubrangso.finance.category.CategoryType type,
             @Param("startDate") java.time.LocalDate startDate);
+
+    /**
+     * Returns per-category sums for a given user, type, and date range.
+     * Each element is [categoryName (String), total (BigDecimal)].
+     * Used by ReportService. Only categories with at least one transaction are returned.
+     */
+    @Query("""
+            SELECT t.category.name, SUM(t.amount)
+            FROM Transaction t
+            WHERE t.user = :user
+              AND t.type = :type
+              AND t.date >= :startDate
+              AND t.date <= :endDate
+            GROUP BY t.category.name
+            """)
+    java.util.List<Object[]> sumByCategoryForUserAndType(
+            @Param("user") com.rubrangso.finance.user.User user,
+            @Param("type") com.rubrangso.finance.category.CategoryType type,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate);
 }
