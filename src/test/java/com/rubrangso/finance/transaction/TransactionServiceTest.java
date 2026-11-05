@@ -3,6 +3,8 @@ package com.rubrangso.finance.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +56,7 @@ class TransactionServiceTest {
         ReflectionTestUtils.setField(user, "id", 1L);
         salary = new Category("Salary", CategoryType.INCOME, false, null);
         ReflectionTestUtils.setField(salary, "id", 1L);
-        when(currentUserProvider.getCurrentUser()).thenReturn(user);
+        lenient().when(currentUserProvider.getCurrentUser()).thenReturn(user);
     }
 
     @Test
@@ -144,5 +147,84 @@ class TransactionServiceTest {
         var result = transactionService.getTransactions(null, null, null, null);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_validRequest_returnsExpensesInDescendingOrder")
+    void getTopExpenses_validRequest_returnsExpensesInDescendingOrder() {
+        var food = new Category("Food", CategoryType.EXPENSE, false, null);
+        ReflectionTestUtils.setField(food, "id", 2L);
+        var t1 = new Transaction(new BigDecimal("300.00"), LocalDate.of(2026, 6, 10), food, "lunch", user);
+        ReflectionTestUtils.setField(t1, "id", 10L);
+        var t2 = new Transaction(new BigDecimal("150.00"), LocalDate.of(2026, 6, 5), food, "dinner", user);
+        ReflectionTestUtils.setField(t2, "id", 11L);
+
+        when(transactionRepository.findTopExpensesForMonth(
+                eq(user), eq(CategoryType.EXPENSE), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(List.of(t1, t2));
+
+        var result = transactionService.getTopExpenses(2026, 6, 5);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).amount()).isEqualByComparingTo("300.00");
+        assertThat(result.get(1).amount()).isEqualByComparingTo("150.00");
+        assertThat(result.get(0).type()).isEqualTo(CategoryType.EXPENSE);
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_fewerThanKExpenses_returnsAll")
+    void getTopExpenses_fewerThanKExpenses_returnsAll() {
+        var food = new Category("Food", CategoryType.EXPENSE, false, null);
+        ReflectionTestUtils.setField(food, "id", 2L);
+        var t1 = new Transaction(new BigDecimal("100.00"), LocalDate.of(2026, 6, 1), food, null, user);
+        ReflectionTestUtils.setField(t1, "id", 10L);
+
+        when(transactionRepository.findTopExpensesForMonth(
+                eq(user), eq(CategoryType.EXPENSE), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(List.of(t1));
+
+        var result = transactionService.getTopExpenses(2026, 6, 5);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_emptyMonth_returnsEmptyList")
+    void getTopExpenses_emptyMonth_returnsEmptyList() {
+        when(transactionRepository.findTopExpensesForMonth(
+                eq(user), eq(CategoryType.EXPENSE), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        var result = transactionService.getTopExpenses(2026, 6, 5);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_invalidMonth_throwsBusinessValidationException")
+    void getTopExpenses_invalidMonth_throwsBusinessValidationException() {
+        assertThatThrownBy(() -> transactionService.getTopExpenses(2026, 0, 5))
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("month");
+
+        assertThatThrownBy(() -> transactionService.getTopExpenses(2026, 13, 5))
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("month");
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_invalidYear_throwsBusinessValidationException")
+    void getTopExpenses_invalidYear_throwsBusinessValidationException() {
+        assertThatThrownBy(() -> transactionService.getTopExpenses(1899, 6, 5))
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("year");
+    }
+
+    @Test
+    @DisplayName("getTopExpenses_kLessThanOne_throwsBusinessValidationException")
+    void getTopExpenses_kLessThanOne_throwsBusinessValidationException() {
+        assertThatThrownBy(() -> transactionService.getTopExpenses(2026, 6, 0))
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("k");
     }
 }

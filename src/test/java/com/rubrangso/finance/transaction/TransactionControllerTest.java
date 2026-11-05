@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rubrangso.finance.category.CategoryType;
+import com.rubrangso.finance.common.exception.BusinessValidationException;
 import com.rubrangso.finance.common.exception.GlobalExceptionHandler;
 import com.rubrangso.finance.common.exception.ResourceNotFoundException;
 import com.rubrangso.finance.config.SecurityConfig;
@@ -132,5 +134,82 @@ class TransactionControllerTest {
 
         mockMvc.perform(delete("/api/transactions/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses returns 200 with expenses array")
+    void getTopExpenses_valid_returns200WithExpensesArray() throws Exception {
+        var tx = new TransactionResponse(1L, new BigDecimal("500.00"), TODAY, "Food", "lunch", CategoryType.EXPENSE);
+        when(transactionService.getTopExpenses(2026, 6, 3)).thenReturn(List.of(tx));
+
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("year", "2026")
+                        .param("month", "6")
+                        .param("k", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses").isArray())
+                .andExpect(jsonPath("$.expenses[0].amount").value(500.00))
+                .andExpect(jsonPath("$.expenses[0].type").value("EXPENSE"));
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses defaults k to 5 when omitted")
+    void getTopExpenses_missingK_defaultsTo5() throws Exception {
+        when(transactionService.getTopExpenses(2026, 6, 5)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("year", "2026")
+                        .param("month", "6"))
+                .andExpect(status().isOk());
+
+        verify(transactionService).getTopExpenses(2026, 6, 5);
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses returns 200 with empty list when no expenses")
+    void getTopExpenses_noExpenses_returns200WithEmptyList() throws Exception {
+        when(transactionService.getTopExpenses(2026, 6, 5)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("year", "2026")
+                        .param("month", "6"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenses").isArray())
+                .andExpect(jsonPath("$.expenses").isEmpty());
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses returns 400 when month is invalid")
+    void getTopExpenses_invalidMonth_returns400() throws Exception {
+        when(transactionService.getTopExpenses(2026, 13, 5))
+                .thenThrow(new BusinessValidationException("month must be between 1 and 12"));
+
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("year", "2026")
+                        .param("month", "13"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("month must be between 1 and 12"));
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses returns 400 when k is less than 1")
+    void getTopExpenses_kLessThanOne_returns400() throws Exception {
+        when(transactionService.getTopExpenses(2026, 6, 0))
+                .thenThrow(new BusinessValidationException("k must be at least 1"));
+
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("year", "2026")
+                        .param("month", "6")
+                        .param("k", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("k must be at least 1"));
+    }
+
+    @Test
+    @DisplayName("GET /api/transactions/top-expenses returns 400 when year is missing")
+    void getTopExpenses_missingYear_returns400() throws Exception {
+        mockMvc.perform(get("/api/transactions/top-expenses")
+                        .param("month", "6"))
+                .andExpect(status().isBadRequest());
     }
 }

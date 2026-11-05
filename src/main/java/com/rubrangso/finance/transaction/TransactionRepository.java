@@ -5,6 +5,7 @@ import com.rubrangso.finance.user.User;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -57,6 +58,27 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("user") com.rubrangso.finance.user.User user,
             @Param("type") com.rubrangso.finance.category.CategoryType type,
             @Param("startDate") java.time.LocalDate startDate);
+
+    /**
+     * Returns the top {@code pageable.pageSize} expenses for the given user and date range,
+     * ordered by amount descending. JOIN FETCH avoids N+1 when building DTOs.
+     * Ties are broken by id descending for deterministic ordering.
+     */
+    @Query("""
+            SELECT t FROM Transaction t
+            JOIN FETCH t.category c
+            WHERE t.user = :user
+              AND t.type = :type
+              AND t.date >= :startDate
+              AND t.date <= :endDate
+            ORDER BY t.amount DESC, t.id DESC
+            """)
+    List<Transaction> findTopExpensesForMonth(
+            @Param("user") User user,
+            @Param("type") CategoryType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            Pageable pageable);
 
     /**
      * Returns per-category sums for a given user, type, and date range.

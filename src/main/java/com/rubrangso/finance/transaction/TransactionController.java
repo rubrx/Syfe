@@ -33,6 +33,18 @@ public class TransactionController {
     }
 
     /**
+     * Returns the top {@code k} expenses for the given calendar month ordered by amount
+     * descending. {@code k} defaults to 5 when omitted.
+     */
+    @GetMapping("/top-expenses")
+    public Map<String, List<TransactionResponse>> getTopExpenses(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(defaultValue = "5") int k) {
+        return Map.of("expenses", transactionService.getTopExpenses(year, month, k));
+    }
+
+    /**
      * Lists transactions for the current user with optional filtering.
      * All query params are optional; date params use ISO-8601 (yyyy-MM-dd).
      */

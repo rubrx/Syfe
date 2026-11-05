@@ -14,7 +14,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -110,6 +112,34 @@ public class TransactionService {
         var transaction = transactionRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found: id=" + id));
         transactionRepository.delete(transaction);
+    }
+
+    /**
+     * Returns the top {@code k} expenses for the given calendar month, ordered by amount
+     * descending. The LIMIT is pushed to the database via {@link PageRequest}.
+     *
+     * @throws BusinessValidationException if year is not 1900–2100, month is not 1–12, or k &lt; 1
+     */
+    public List<TransactionResponse> getTopExpenses(int year, int month, int k) {
+        if (year < 1900 || year > 2100) {
+            throw new BusinessValidationException("year must be between 1900 and 2100");
+        }
+        if (month < 1 || month > 12) {
+            throw new BusinessValidationException("month must be between 1 and 12");
+        }
+        if (k < 1) {
+            throw new BusinessValidationException("k must be at least 1");
+        }
+
+        var user = currentUserProvider.getCurrentUser();
+        var startDate = LocalDate.of(year, month, 1);
+        var endDate = startDate.with(TemporalAdjusters.lastDayOfMonth());
+
+        return transactionRepository
+                .findTopExpensesForMonth(user, CategoryType.EXPENSE, startDate, endDate, PageRequest.of(0, k))
+                .stream()
+                .map(TransactionResponse::from)
+                .toList();
     }
 
     private Category resolveCategory(String name, User user) {
